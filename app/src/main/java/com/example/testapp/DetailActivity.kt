@@ -8,9 +8,11 @@ class DetailActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail)
-        (supportFragmentManager.findFragmentById(R.id.detail_frag) as JoggingDetailFragment?)?.setCocktail(
-            intent.extras!![EXTRA_COCKTAIL_ID] as Int
-        )
+        val frag =
+            supportFragmentManager.findFragmentById(R.id.detail_frag) as JoggingDetailFragment?
+
+        frag!!.setCocktail((intent.extras!![EXTRA_COCKTAIL_ID] as Int).toLong())
+
     }
 
     companion object {

@@ -14,11 +14,10 @@ class JoggingListFragment : ListFragment() {
     internal interface Listener {
         fun itemClicked(id: Long)
     }
-
     private var listener: Listener? = null
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedinstanceState: Bundle?): View? {
         val allContacts: List<Sport> =
-            (DatabaseHandler.getInstance(context)?.getAllSports() ?: null) as List<Sport>;
+            (DatabaseHandler.getInstance(context)?.getAllContacts() ?: null) as List<Sport>;
         val names = arrayOfNulls<String>(allContacts.size)
         for (i in allContacts.indices) {
             names[i] = allContacts[i].name
@@ -34,6 +33,7 @@ class JoggingListFragment : ListFragment() {
     }
 
     override fun onListItemClick(listView: ListView, itemView: View, position: Int, id: Long) {
+        StoperFragment.global.setId(id)
         listener?.itemClicked(id)
     }
 }

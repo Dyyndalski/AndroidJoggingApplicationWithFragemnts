@@ -3,6 +3,7 @@ package com.example.testapp;
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentTransaction
@@ -19,7 +20,8 @@ class MainActivity : AppCompatActivity(), JoggingListFragment.Listener {
         if (fragmentContainer != null) {
             val details = JoggingDetailFragment()
             val ft = supportFragmentManager.beginTransaction()
-            details.setCocktail(id.toInt())
+            details.setCocktail(id)
+            StoperFragment.global.setId(id)
             ft.replace(R.id.fragment_container, details)
             ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
             ft.addToBackStack(null)

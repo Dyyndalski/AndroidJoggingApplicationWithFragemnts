@@ -4,56 +4,117 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import android.util.Log
+import android.os.Build
+import androidx.annotation.RequiresApi
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 class DatabaseHandler(context: Context?) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("DROP TABLE IF EXISTS  " + TABLE_SPORTS)
         val CREATE_CONTACTS_TABLE = ("CREATE TABLE " + TABLE_SPORTS + "("
-                + KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," + KEY_NAME + " TEXT,"
-                + KEY_DETAILS + " TEXT" + ")")
+                + KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
+                + KEY_NAME + " TEXT,"
+                + KEY_PH_NO + " TEXT,"
+                + RECORD_TIME + " TEXT DEFAULT '00:00:00', "
+                + RECORD_DATE + " TEXT DEFAULT '0000-00-00',"
+                + LAST_TIME + " TEXT DEFAULT '00:00:00', "
+                + LAST_DATE + " TEXT DEFAULT '0000-00-00' "
+                + ")")
         db.execSQL(CREATE_CONTACTS_TABLE)
-
         addDefaultData(db);
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS  " + TABLE_SPORTS)
-        Log.e("XD", "TA")
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_SPORTS)
         onCreate(db)
     }
 
-    fun getAllSports(): List<Sport> {
-        val selectQuery = "SELECT * FROM " + TABLE_SPORTS
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    fun updateDateAndTime(seconds: Int, sportId: Int) {
+        val sportById = getSportById(sportId.toLong())
+        val hours = seconds / 3600
+        val minutes = seconds % 3600 / 60
+        val secs = seconds % 60
+        val parser = DateTimeFormatter.ofPattern("HH:mm:ss")
+        val oldTime = LocalTime.parse(sportById.recordTime, parser)
+        val db = this.writableDatabase
+        val newTime = LocalTime.of(hours, minutes, secs)
+        val date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        println("OLD $oldTime    NEW $newTime")
+        if (newTime.compareTo(oldTime) > 0) {
+            val values = ContentValues()
+            values.put(RECORD_TIME, newTime.toString())
+            values.put(RECORD_DATE, date)
+            db.update(TABLE_SPORTS, values, KEY_ID + " = ?", arrayOf((sportId + 1).toString()))
+        }
+        val values = ContentValues()
+        values.put(LAST_TIME, newTime.toString())
+        values.put(LAST_DATE, date)
+        db.update(TABLE_SPORTS, values, KEY_ID + " = ?", arrayOf((sportId + 1).toString()))
+        db.close()
+    }
+
+    fun getSportById(ID: Long): Sport {
+        val db = this.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT * FROM " + TABLE_SPORTS + " WHERE ID = ?",
+            arrayOf((ID + 1).toString()),
+            null
+        )
+        val sport = Sport()
+        if (cursor.moveToFirst()) {
+            do {
+                sport.id = cursor.getLong(0)
+                sport.name = cursor.getString(1)
+                sport.details = cursor.getString(2)
+                sport.recordTime = cursor.getString(3)
+                sport.recordDate = cursor.getString(4)
+                sport.lastTime = cursor.getString(5)
+                sport.lastDate = cursor.getString(6)
+            } while (cursor.moveToNext())
+        }
+        db.close()
+        return sport
+    }
+
+    fun getAllContacts(): List<Sport?> {
+        val contactList: MutableList<Sport?> = ArrayList()
+        val selectQuery = "SELECT  * FROM " + TABLE_SPORTS
         val db = this.writableDatabase
         val cursor = db.rawQuery(selectQuery, null)
-
-        val allSport = arrayListOf<Sport>()
-
         if (cursor.moveToFirst()) {
-
             do {
                 val sport = Sport()
                 sport.id = cursor.getLong(0)
                 sport.name = cursor.getString(1)
                 sport.details = cursor.getString(2)
-                allSport.add(sport);
+                sport.recordTime = cursor.getString(3)
+                sport.recordDate = cursor.getString(4)
+                sport.lastTime = cursor.getString(5)
+                sport.lastDate = cursor.getString(6)
+                contactList.add(sport)
             } while (cursor.moveToNext())
         }
-        return allSport
+        return contactList
     }
 
     companion object {
         private const val DATABASE_VERSION = 1
-        private const val DATABASE_NAME = "bazaDanych"
-        private const val TABLE_SPORTS = "sportTraces"
+        private const val DATABASE_NAME = "nowabaz13"
+        private const val TABLE_SPORTS = "lala"
         private const val KEY_ID = "id"
         private const val KEY_NAME = "name"
-        private const val KEY_DETAILS = "details"
+        private const val KEY_PH_NO = "details"
+        private const val RECORD_TIME = "record_time"
+        private const val RECORD_DATE = "record_date"
+        private const val LAST_TIME = "last_time"
+        private const val LAST_DATE = "last_date"
+        private val mInstance: DatabaseHandler? = null
         private var instance: DatabaseHandler? = null
         private var db: SQLiteDatabase? = null
-
         @Synchronized
         fun getInstance(context: Context?): DatabaseHandler? {
             if (instance == null) {
@@ -63,7 +124,6 @@ class DatabaseHandler(context: Context?) :
             return instance
         }
     }
-
     private fun addDefaultData(db: SQLiteDatabase) {
         val s1 = Sport("Bobrowy Szlak", "Ścieżka edukacyjno-przyrodnicza “Bobrowy Szlak” rozpoczyna się we wsi Czmoniec (gmina Kórnik) i biegnie przez lasy, obszary łąk nadrzecznych z szypułkowymi dębami, skąd rozciąga się niepowtarzalny widok na występujące tam starorzecze Warty oraz jej naturalne rozlewisko. Trasa kończy swój bieg przy boisku w Czmońcu.");
         val s2 = Sport("Aktywna Trójka", "Z myślą o aktywnym wypoczynku na świeżym powietrzu przez cały rok, z inicjatywy Gmin: Mosina, Puszczykowo, Komorniki i Stęszew, przy współpracy z WPN powstał projekt pn. „Aktywna Trójka” – trasy trzech aktywności po Wielkopolskim Parku Narodowym. W ramach przeprowadzonych prac została wyznaczona sieć tras w formie zamkniętych pętli, przeznaczona do uprawiania nordic walking, biegania, a w zimie dla narciarstwa biegowego.");
@@ -77,12 +137,12 @@ class DatabaseHandler(context: Context?) :
         val s9 = Sport("Orkowo", "Mnóstwo zieleni – pola, wierzby, male jeziorka. Brzeg Warty obrośnięty dębami. Struga wpływająca do Warty i bardzo ciekawy przepust drogowy – #nieplaczabaw ;)");
         val s10 = Sport("Rezerwat Jezioro Drążynek ", "Ciekawa trasa wokół jeziora. Liczne ślady obecności bobrów. Położone jest niedaleko Kociałkowej Górki. Niedaleko znajduje Rezerwat Las Liścisty w Promnie");
 
-        val toAdd = arrayListOf<Sport>(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10)
+        val toAdd = arrayListOf(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10)
 
         toAdd.forEach {
             val values = ContentValues()
             values.put(KEY_NAME, it.name) // Contact Name
-            values.put(KEY_DETAILS, it.details) // Contact Phone
+            values.put(KEY_PH_NO, it.details) // Contact Phone
             db.insert(TABLE_SPORTS, null, values)
         }
     }
